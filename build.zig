@@ -5,6 +5,7 @@ pub fn build(b: *Builder) void {
     const exe = b.addExecutable("zig-chip8", "src/main.zig");
     exe.setBuildMode(mode);
     exe.linkSystemLibrary("SDL2");
+    exe.linkSystemLibrary("SDL2_mixer");
     exe.linkSystemLibrary("c");
 
     b.default_step.dependOn(&exe.step);

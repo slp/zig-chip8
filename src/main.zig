@@ -65,7 +65,9 @@ pub fn main() !void {
         }
 
         gui.updateScreen(chip8.getScreen());
-        chip8.updateTimers();
+        if (chip8.updateTimers()) {
+            gui.playBeep();
+        }
 
         while (true) {
             var event = gui.getEvent();

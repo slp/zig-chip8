@@ -1,12 +1,18 @@
 const c = @cImport({
-    @cInclude("SDL2/SDL.h");
+    @cInclude("SDL.h");
+});
+const m = @cImport({
+    @cInclude("SDL_mixer.h");
 });
 const assert = @import("std").debug.assert;
+const warn = @import("std").log.warn;
 
 const SdlError = error{
     InitializationFailed,
     CreateWindowFailed,
     CreateRendererFailed,
+    LoadWavFailed,
+    OpenAudioFailed,
 };
 
 pub const EventKind = enum {
@@ -66,13 +72,17 @@ pub const Key = enum {
     Key_F,
 };
 
+const SdlAudio = struct {
+    beep: *m.Mix_Chunk,
+};
+
 pub const Sdl = struct {
     screen: *c.SDL_Window,
     renderer: *c.SDL_Renderer,
-    foo: u8 = 0,
+    audio: ?SdlAudio,
 
     pub fn init() SdlError!Sdl {
-        if (c.SDL_Init(c.SDL_INIT_VIDEO) != 0) {
+        if (c.SDL_Init(c.SDL_INIT_VIDEO | c.SDL_INIT_AUDIO) != 0) {
             c.SDL_Log("Unable to initialize SDL: %s", c.SDL_GetError());
             return SdlError.InitializationFailed;
         }
@@ -90,10 +100,36 @@ pub const Sdl = struct {
 
         _ = c.SDL_RenderSetLogicalSize(renderer, 64, 32);
 
+        const audio = try initSound();
+
         return Sdl{
             .screen = screen,
             .renderer = renderer,
+            .audio = audio,
         };
+    }
+
+    fn initSound() SdlError!SdlAudio {
+        if (m.Mix_OpenAudio(44100, m.MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+            c.SDL_Log("Unable to open audio device: %s", c.SDL_GetError());
+            return SdlError.OpenAudioFailed;
+        }
+
+        const beep = m.Mix_LoadWAV("res/beep.wav") orelse
+            {
+            c.SDL_Log("Failed to load beep sound effect: %s", m.Mix_GetError());
+            return SdlError.LoadWavFailed;
+        };
+
+        return SdlAudio{
+            .beep = beep,
+        };
+    }
+
+    pub fn playBeep(self: *Sdl) void {
+        if (self.audio) |audio| {
+            _ = m.Mix_PlayChannel(-1, audio.beep, 0);
+        }
     }
 
     pub fn updateScreen(self: *Sdl, screen: *[32][64]u8) void {

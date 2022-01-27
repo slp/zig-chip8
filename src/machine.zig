@@ -56,21 +56,27 @@ pub const Machine = struct {
         }
     }
 
-    pub fn updateTimers(self: *Machine) void {
+    pub fn updateTimers(self: *Machine) bool {
         if (self.timestamp == 0) {
             self.timestamp = std.time.milliTimestamp();
-        } else {
-            const now = std.time.milliTimestamp();
-            if ((now - self.timestamp) > 16) {
-                self.timestamp = now;
-                if (self.delay_timer > 0) {
-                    self.delay_timer -= 1;
-                }
-                if (self.sound_timer > 0) {
-                    self.sound_timer -= 1;
+            return false;
+        }
+
+        const now = std.time.milliTimestamp();
+        if ((now - self.timestamp) > 16) {
+            self.timestamp = now;
+            if (self.delay_timer > 0) {
+                self.delay_timer -= 1;
+            }
+            if (self.sound_timer > 0) {
+                self.sound_timer -= 1;
+                if (self.sound_timer == 0) {
+                    return true;
                 }
             }
         }
+
+        return false;
     }
 
     pub fn updateKey(self: *Machine, key: u8, is_down: bool) void {
